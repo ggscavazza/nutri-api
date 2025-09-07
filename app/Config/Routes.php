@@ -10,7 +10,8 @@ $routes->add('server-status', static fn() => service('response')->setStatusCode(
 
 $routes->get('openapi.json', 'OpenApiController::json', ['filter' => 'ratelimit:30,60']);
 $routes->get('docs',        'OpenApiController::ui');
-$routes->post('tasks/deploy/request', 'DeployController::request', ['filter' => 'ratelimit:2,60']);
+//$routes->post('tasks/deploy/request', 'DeployController::request', ['filter' => 'ratelimit:2,60']);
+$routes->post('tasks/deploy/request', 'DeployController::request');
 
 
 $routes->setAutoRoute(false);           // 🚫 sem AutoRoute
