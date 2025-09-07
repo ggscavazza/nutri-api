@@ -1,0 +1,12 @@
+# Evita listagem
+Options -Indexes
+
+# Bloqueia acesso direto a pastas sensíveis
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/(app|system|vendor|writable|tests|docs|\.env) [NC]
+RewriteRule ^ - [F,L]
+
+# Redireciona tudo p/ index.php na raiz (que reencaminha p/ public/index.php)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]

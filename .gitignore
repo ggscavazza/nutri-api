@@ -131,3 +131,6 @@ _modules/*
 
 # Swagger (gerado no CI)
 public/openapi.json
+
+# ci deploy keys
+ci_deploy_key*

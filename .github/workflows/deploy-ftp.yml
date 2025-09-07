@@ -1,0 +1,40 @@
+name: Deploy via FTP (production)
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Subiremos o projeto sem vendor e sem writable/.env
+      - name: FTP Deploy to docroot
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }}
+          protocol: ${{ secrets.FTP_PROTOCOL }}   # 'ftps' preferível, 'ftp' se não houver TLS
+          local-dir: ./
+          server-dir: ${{ secrets.REMOTE_PATH }}/
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/tests/**
+            **/.env
+            **/writable/**
+            **/vendor/**
+            public/openapi.json
+          state-name: .ftp-deploy-sync-state.json
+
+      - name: Trigger deploy request (HTTP)
+        run: |
+          curl -sS -X POST "https://api.julianafagiani.com.br/tasks/deploy/request" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
+            -d "{\"sha\":\"${GITHUB_SHA}\"}"
