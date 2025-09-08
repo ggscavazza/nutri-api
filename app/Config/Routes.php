@@ -8,7 +8,7 @@ $routes->add('wp-admin', static fn() => service('response')->setStatusCode(410))
 $routes->add('.env', static fn() => service('response')->setStatusCode(410));
 $routes->add('server-status', static fn() => service('response')->setStatusCode(410));
 
-$routes->get('openapi.json', 'OpenApiController::json', ['filter' => 'ratelimit:30,60']);
+$routes->get('openapi.json', 'OpenApiController::spec');
 $routes->get('docs',        'OpenApiController::ui');
 //$routes->post('tasks/deploy/request', 'DeployController::request', ['filter' => 'ratelimit:2,60']);
 $routes->post('tasks/deploy/request', 'DeployController::request');

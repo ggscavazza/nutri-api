@@ -19,7 +19,7 @@ use OpenApi\Attributes as OA;
 // JWT Bearer global
 #[OA\SecurityScheme(
     securityScheme: 'bearerAuth',
-    type: 'https',
+    type: 'http',
     scheme: 'bearer',
     bearerFormat: 'JWT'
 )]

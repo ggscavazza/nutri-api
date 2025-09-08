@@ -2,51 +2,85 @@
 namespace App\Controllers;
 
 use CodeIgniter\Controller;
-use OpenApi\Generator;
+use CodeIgniter\HTTP\ResponseInterface;
 
 class OpenApiController extends Controller
 {
-    // Gera e entrega o JSON em tempo real (dev) ou sob flag em prod
-    public function json()
+    /**
+     * Página do Swagger UI
+     */
+    public function ui(): ResponseInterface
     {
-        $enabled = env('app.docsEnabled', 'true'); // desligue em prod se quiser
-        if ($enabled !== 'true') {
-            return service('response')->setStatusCode(404);
+        // opcional: desligar docs em produção via .env -> app.docsEnabled = false
+        if (! (bool) env('app.docsEnabled', true)) {
+            return $this->response->setStatusCode(404);
         }
-        // Scaneia apenas diretórios relevantes
-        $openapi = Generator::scan([APPPATH . 'Controllers', APPPATH . 'Docs']);
-        return $this->response->setHeader('Content-Type', 'application/json')
-                              ->setBody($openapi->toJson());
-    }
 
-    // Swagger UI simples via CDN
-    public function ui()
-    {
-        $specUrl = rtrim((string)env('app.baseURL'), '/') . '/openapi.json';
-        $html = <<<HTML
+        $html = <<<'HTML'
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Nutri – API Docs</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css"/>
-  <style>body{margin:0} #swagger-ui{max-width:100%}</style>
-</head>
-<body>
-<div id="swagger-ui"></div>
-<script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
-<script>
-  window.ui = SwaggerUIBundle({
-    url: '$specUrl',
-    dom_id: '#swagger-ui',
-    deepLinking: true,
-    presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-    layout: "BaseLayout"
-  });
-</script>
-</body>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8"/>
+    <title>API Docs — Nutri Juliana</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"/>
+    <style>body{margin:0}.topbar{display:none}</style>
+  </head>
+  <body>
+    <div id="swagger"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "/openapi.json",
+        dom_id: "#swagger",
+        deepLinking: true,
+        filter: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: "BaseLayout"
+      });
+    </script>
+  </body>
 </html>
 HTML;
-        return $this->response->setHeader('Content-Type', 'text/html')->setBody($html);
+
+        return $this->response->setContentType('text/html')->setBody($html);
+    }
+
+    /**
+     * Serve o openapi.json (estático ou gerado on-the-fly)
+     */
+    public function spec(): ResponseInterface
+    {
+        if (! (bool) env('app.docsEnabled', true)) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $file = FCPATH . 'openapi.json';
+        if (is_file($file)) {
+            return $this->response
+                ->setHeader('Cache-Control', 'public, max-age=300')
+                ->setContentType('application/json')
+                ->setBody(file_get_contents($file));
+        }
+
+        // fallback: gerar on-the-fly se swagger-php estiver disponível
+        try {
+            if (function_exists('\OpenApi\scan')) {
+                $openapi = \OpenApi\scan([APPPATH]);
+                return $this->response->setContentType('application/json')->setBody($openapi->toJson());
+            }
+            if (class_exists(\OpenApi\Generator::class)) {
+                $openapi = \OpenApi\Generator::scan([APPPATH]);
+                return $this->response->setContentType('application/json')->setBody($openapi->toJson());
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => ['message' => 'Falha ao gerar OpenAPI', 'detail' => $e->getMessage()]
+            ]);
+        }
+
+        return $this->response->setStatusCode(404)->setJSON([
+            'error' => ['message' => 'openapi.json não encontrado e swagger-php indisponível']
+        ]);
     }
 }
