@@ -30,7 +30,7 @@ class AuthController extends Controller
     public function login()
     {
         $data = $this->request->getJSON(true) ?? $this->request->getPost();
-        $email = trim((string)($data['email'] ?? ''));
+        $email    = strtolower(trim((string)($data['email'] ?? ''))); // <- normaliza
         $password = (string)($data['password'] ?? '');
 
         if ($email === '' || $password === '') {
@@ -38,11 +38,38 @@ class AuthController extends Controller
         }
 
         $users = new UserModel();
-        $user = $users->where('email', $email)->first();
+        $user  = $users->where('email', $email)->first();
 
-        if (! $user || ! password_verify($password, $user['password_hash'])) {
+        if (! $user) {
             return json_error('E-mail ou senha inválidos.', 'auth.invalid_credentials', 401);
         }
+
+        $hash = (string)$user['password_hash'];
+        $ok   = false;
+
+        // 1) Hash moderno (bcrypt/argon2)
+        if (preg_match('#^\$(2y|2a|argon2(id|i))\$#', $hash)) {
+            $ok = password_verify($password, $hash);
+            if ($ok && password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                $users->update($user['id'], ['password_hash' => $newHash]);
+                $hash = $newHash; // opcional
+            }
+        }
+        // 2) Legado MD5 (32 hex) -> valida e atualiza para bcrypt
+        elseif (preg_match('/^[a-f0-9]{32}$/i', $hash)) {
+            if (hash_equals(strtolower($hash), md5($password))) {
+                $ok = true;
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                $users->update($user['id'], ['password_hash' => $newHash]);
+                $hash = $newHash; // opcional
+            }
+        }
+
+        if (! $ok) {
+            return json_error('E-mail ou senha inválidos.', 'auth.invalid_credentials', 401);
+        }
+
         if ($user['status'] !== 'ativo') {
             return json_error('Usuário inativo.', 'auth.user_inactive', 401);
         }
@@ -51,12 +78,11 @@ class AuthController extends Controller
         $access  = $jwt->generateAccessToken($user, 900); // 15 min
         $refresh = $jwt->generateRefreshToken();
 
-        // salva refresh hash
         $rtModel = new RefreshTokenModel();
         $rtModel->insert([
             'user_id'    => $user['id'],
             'token'      => $jwt->hashToken($refresh),
-            'expires_at' => date('Y-m-d H:i:s', time() + 60 * 60 * 24 * 30), // 30 dias
+            'expires_at' => date('Y-m-d H:i:s', time() + 60 * 60 * 24 * 30),
         ]);
 
         return json_ok([
@@ -64,10 +90,10 @@ class AuthController extends Controller
             'expires_in'    => 900,
             'refresh_token' => $refresh,
             'user'          => [
-                'id' => (int)$user['id'],
-                'name' => $user['name'],
-                'email' => $user['email'],
-                'role' => $user['role'],
+                'id'     => (int)$user['id'],
+                'name'   => $user['name'],
+                'email'  => $user['email'],
+                'role'   => $user['role'],
                 'status' => $user['status'],
             ],
         ]);
