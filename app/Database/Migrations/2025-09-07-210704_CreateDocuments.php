@@ -19,7 +19,7 @@ class CreateDocuments extends Migration
             'size_bytes'   => ['type'=>'BIGINT','unsigned'=>true],
             'scope'        => ['type'=>'ENUM','constraint'=>['geral','paciente']],
             'status'       => ['type'=>'ENUM','constraint'=>['ativo','inativo'],'default'=>'ativo'],
-            'uploaded_by'  => ['type'=>'INT','constraint'=>11,'unsigned'=>true],
+            'uploaded_by'  => ['type'=>'INT','constraint'=>11,'unsigned'=>true, 'null' => true],
             'created_at'   => ['type'=>'DATETIME','null'=>true],
             'updated_at'   => ['type'=>'DATETIME','null'=>true],
             'deleted_at'   => ['type'=>'DATETIME','null'=>true],
