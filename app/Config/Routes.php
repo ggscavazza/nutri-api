@@ -13,6 +13,11 @@ $routes->get('docs',        'OpenApiController::ui');
 //$routes->post('tasks/deploy/request', 'DeployController::request', ['filter' => 'ratelimit:2,60']);
 $routes->post('tasks/deploy/request', 'DeployController::request');
 
+// Ping de teste (GET) para validar rapidamente a rota e o autoload
+$routes->get('tasks/ping', static function () {
+    return service('response')->setJSON(['ok' => true, 'time' => date('c')]);
+});
+
 
 $routes->setAutoRoute(false);           // 🚫 sem AutoRoute
 $routes->setDefaultController('');      // sem default
