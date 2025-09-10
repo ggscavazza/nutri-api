@@ -19,7 +19,7 @@ class DocumentsController extends Controller
         'application/zip',
     ];
     private array $allowedExt = ['pdf','epub','docx'];
-    private int $maxSizeMB = 25;
+    private int $maxSizeMB = 50;
 
     /** Lista documentos com regras por papel */
     #[OA\Get(
