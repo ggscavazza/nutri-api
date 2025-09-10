@@ -22,11 +22,13 @@ class RateLimit implements FilterInterface
         $throttler = Services::throttler();
 
         $ip    = $request->getIPAddress() ?: 'unknown';
-        $uri   = $request->getURI();
+        $method = strtolower($request->getMethod());
+        $uri   = $request->getUri();
         $path  = $uri ? trim($uri->getPath(), '/') : '/';
 
-        // evita chaves muito longas/estranhas em backends de cache
-        $key  = 'rate:' . md5($ip . ':' . $path);
+        // *** chave segura: apenas [a-z0-9_] ***
+        // evita caracteres reservados ({ } ( ) / \ @ :)
+        $key = 'rate_' . md5($ip . '|' . $method . '|' . $path);
 
         if ($throttler->check($key, $max, $per) === false) {
             // tempo até novo token (aprox.)
