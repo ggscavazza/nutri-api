@@ -149,7 +149,7 @@ class DocumentsController extends Controller
         if (! $file || ! $file->isValid()) {
             return json_error('Arquivo ausente ou inválido.', 'docs.bad_file', 422);
         }
-        if ($file->getSizeByUnit('m') > $this->maxSizeMB) {
+        if ($file->getSizeByUnit('mb') > $this->maxSizeMB) {
             return json_error('Arquivo excede '.$this->maxSizeMB.'MB.', 'docs.too_large', 413);
         }
 
